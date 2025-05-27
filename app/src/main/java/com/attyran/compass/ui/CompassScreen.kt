@@ -1,6 +1,8 @@
 package com.attyran.compass.ui
 
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.Spring
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -18,7 +20,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -32,7 +37,11 @@ fun CompassScreen(
     val compassData by viewModel.compassData.collectAsStateWithLifecycle()
     val rotation by animateFloatAsState(
         targetValue = -compassData.degrees.toFloat(),
-        label = "compass_rotation"
+        label = "compass_rotation",
+        animationSpec = spring(
+            dampingRatio = 0.8f,
+            stiffness = Spring.StiffnessLow
+        )
     )
 
     // Extract colorScheme and typography before Canvas
@@ -77,16 +86,39 @@ fun CompassScreen(
                         style = Stroke(width = 2.dp.toPx())
                     )
 
-                    // Draw cardinal points
+                    // Draw cardinal points and labels
                     val cardinalPoints = listOf("N", "E", "S", "W")
+                    val textPaint = Paint().asFrameworkPaint().apply {
+                        textSize = 14.dp.toPx()
+                        textAlign = android.graphics.Paint.Align.CENTER
+                        color = colorScheme.onBackground.toArgb()
+                    }
+
                     cardinalPoints.forEachIndexed { index, point ->
-                        val angle = Math.toRadians(90.0 * index)
-                        val x = center.x + (radius - 40.dp.toPx()) * kotlin.math.cos(angle).toFloat()
-                        val y = center.y + (radius - 40.dp.toPx()) * kotlin.math.sin(angle).toFloat()
+                        val angle = Math.toRadians((-90.0) + (90.0 * index))
+                        val dotRadius = if (point == "N") 6.dp.toPx() else 4.dp.toPx()
+                        
+                        // Position for the dot
+                        val dotX = center.x + (radius - 30.dp.toPx()) * kotlin.math.cos(angle).toFloat()
+                        val dotY = center.y + (radius - 30.dp.toPx()) * kotlin.math.sin(angle).toFloat()
+                        
+                        // Position for the label
+                        val labelX = center.x + (radius - 50.dp.toPx()) * kotlin.math.cos(angle).toFloat()
+                        val labelY = center.y + (radius - 50.dp.toPx()) * kotlin.math.sin(angle).toFloat() + 5.dp.toPx()
+
+                        // Draw the dot
                         drawCircle(
                             color = if (point == "N") Color.Red else colorScheme.onBackground,
-                            radius = 4.dp.toPx(),
-                            center = Offset(x, y)
+                            radius = dotRadius,
+                            center = Offset(dotX, dotY)
+                        )
+
+                        // Draw the label
+                        drawContext.canvas.nativeCanvas.drawText(
+                            point,
+                            labelX,
+                            labelY,
+                            textPaint
                         )
                     }
 
