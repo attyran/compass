@@ -35,6 +35,11 @@ class CompassSensor @Inject constructor(
         var lastAccelerometerSet = false
         var lastMagnetometerSet = false
 
+        // Smoothing variables
+        var lastAzimuth = 0.0
+        var lastStrength = 0f
+        val smoothingFactor = 0.1f // Lower = more smoothing
+
         val sensorEventListener = object : SensorEventListener {
             override fun onSensorChanged(event: SensorEvent) {
                 when (event.sensor.type) {
@@ -59,9 +64,16 @@ class CompassSensor @Inject constructor(
 
                     val azimuthInRadians = orientationAngles[0]
                     val azimuthInDegrees = Math.toDegrees(azimuthInRadians.toDouble())
-                    val normalizedAzimuth = ((azimuthInDegrees + 360) % 360).roundToInt()
+                    val normalizedAzimuth = (azimuthInDegrees + 360) % 360
+
+                    // Apply exponential smoothing to azimuth
+                    lastAzimuth = lastAzimuth + smoothingFactor * (normalizedAzimuth - lastAzimuth)
                     
-                    val direction = when (normalizedAzimuth) {
+                    // Apply exponential smoothing to strength
+                    val currentStrength = lastMagnetometer.magnitude()
+                    lastStrength = lastStrength + smoothingFactor * (currentStrength - lastStrength)
+
+                    val direction = when (lastAzimuth.roundToInt()) {
                         in 0..22, in 338..360 -> "N"
                         in 23..67 -> "NE"
                         in 68..112 -> "E"
@@ -75,9 +87,9 @@ class CompassSensor @Inject constructor(
 
                     trySend(
                         CompassData(
-                            degrees = normalizedAzimuth,
+                            degrees = lastAzimuth.roundToInt(),
                             direction = direction,
-                            strength = lastMagnetometer.magnitude()
+                            strength = lastStrength
                         )
                     )
                 }
@@ -89,12 +101,12 @@ class CompassSensor @Inject constructor(
         sensorManager.registerListener(
             sensorEventListener,
             accelerometer,
-            SensorManager.SENSOR_DELAY_NORMAL
+            SensorManager.SENSOR_DELAY_UI // Reduced from GAME to UI for less frequent updates
         )
         sensorManager.registerListener(
             sensorEventListener,
             magnetometer,
-            SensorManager.SENSOR_DELAY_NORMAL
+            SensorManager.SENSOR_DELAY_UI
         )
 
         awaitClose {

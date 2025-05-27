@@ -25,6 +25,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -35,6 +36,7 @@ fun CompassScreen(
     viewModel: CompassViewModel = hiltViewModel()
 ) {
     val compassData by viewModel.compassData.collectAsStateWithLifecycle()
+    val locationData by viewModel.locationData.collectAsStateWithLifecycle()
     val rotation by animateFloatAsState(
         targetValue = -compassData.degrees.toFloat(),
         label = "compass_rotation",
@@ -157,6 +159,25 @@ fun CompassScreen(
                         modifier = Modifier.padding(top = 8.dp)
                     )
                 }
+            }
+
+            // Location information
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.padding(16.dp)
+            ) {
+                Text(
+                    text = "Elevation: ${String.format("%.1f", locationData.elevation)}ft",
+                    style = typography.bodyLarge,
+                    color = colorScheme.onSurfaceVariant
+                )
+                Text(
+                    text = locationData.address,
+                    style = typography.bodyMedium,
+                    color = colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(top = 8.dp)
+                )
             }
         }
     }
