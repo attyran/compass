@@ -5,11 +5,14 @@ import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
+import android.view.Surface
+import android.view.WindowManager
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import javax.inject.Inject
+import kotlin.math.abs
 import kotlin.math.roundToInt
 
 class CompassSensor @Inject constructor(
@@ -19,59 +22,58 @@ class CompassSensor @Inject constructor(
         context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
     }
 
-    private val accelerometer by lazy {
-        sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
+    @Suppress("DEPRECATION")
+    private val windowManager by lazy {
+        context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
     }
 
-    private val magnetometer by lazy {
-        sensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD)
+    private val rotationVectorSensor by lazy {
+        sensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR)
     }
 
     fun getCompassReadings(): Flow<CompassData> = callbackFlow {
         val rotationMatrix = FloatArray(9)
+        val adjustedRotationMatrix = FloatArray(9)
         val orientationAngles = FloatArray(3)
-        var lastAccelerometer = FloatArray(3)
-        var lastMagnetometer = FloatArray(3)
-        var lastAccelerometerSet = false
-        var lastMagnetometerSet = false
 
         // Smoothing variables
         var lastAzimuth = 0.0
-        var lastStrength = 0f
         val smoothingFactor = 0.1f // Lower = more smoothing
 
         val sensorEventListener = object : SensorEventListener {
             override fun onSensorChanged(event: SensorEvent) {
-                when (event.sensor.type) {
-                    Sensor.TYPE_ACCELEROMETER -> {
-                        lastAccelerometer = event.values.clone()
-                        lastAccelerometerSet = true
-                    }
-                    Sensor.TYPE_MAGNETIC_FIELD -> {
-                        lastMagnetometer = event.values.clone()
-                        lastMagnetometerSet = true
-                    }
-                }
+                if (event.sensor.type == Sensor.TYPE_ROTATION_VECTOR) {
+                    SensorManager.getRotationMatrixFromVector(rotationMatrix, event.values)
 
-                if (lastAccelerometerSet && lastMagnetometerSet) {
-                    SensorManager.getRotationMatrix(
-                        rotationMatrix,
-                        null,
-                        lastAccelerometer,
-                        lastMagnetometer
-                    )
-                    SensorManager.getOrientation(rotationMatrix, orientationAngles)
+                    val rotation = windowManager.defaultDisplay.rotation
+                    val axisX = when (rotation) {
+                        Surface.ROTATION_90 -> SensorManager.AXIS_Z
+                        Surface.ROTATION_180 -> SensorManager.AXIS_MINUS_X
+                        Surface.ROTATION_270 -> SensorManager.AXIS_MINUS_Z
+                        else -> SensorManager.AXIS_X
+                    }
+                    val axisY = when (rotation) {
+                        Surface.ROTATION_90 -> SensorManager.AXIS_MINUS_X
+                        Surface.ROTATION_180 -> SensorManager.AXIS_MINUS_Z
+                        Surface.ROTATION_270 -> SensorManager.AXIS_X
+                        else -> SensorManager.AXIS_Z
+                    }
+
+                    SensorManager.remapCoordinateSystem(rotationMatrix, axisX, axisY, adjustedRotationMatrix)
+
+                    SensorManager.getOrientation(adjustedRotationMatrix, orientationAngles)
 
                     val azimuthInRadians = orientationAngles[0]
                     val azimuthInDegrees = Math.toDegrees(azimuthInRadians.toDouble())
                     val normalizedAzimuth = (azimuthInDegrees + 360) % 360
 
                     // Apply exponential smoothing to azimuth
-                    lastAzimuth = lastAzimuth + smoothingFactor * (normalizedAzimuth - lastAzimuth)
-                    
-                    // Apply exponential smoothing to strength
-                    val currentStrength = lastMagnetometer.magnitude()
-                    lastStrength = lastStrength + smoothingFactor * (currentStrength - lastStrength)
+                    var delta = normalizedAzimuth - lastAzimuth
+                    if (abs(delta) > 180) {
+                        delta = if (delta > 0) delta - 360 else delta + 360
+                    }
+                    lastAzimuth += smoothingFactor * delta
+                    lastAzimuth = (lastAzimuth + 360) % 360
 
                     val direction = when (lastAzimuth.roundToInt()) {
                         in 0..22, in 338..360 -> "N"
@@ -88,8 +90,7 @@ class CompassSensor @Inject constructor(
                     trySend(
                         CompassData(
                             degrees = lastAzimuth.roundToInt(),
-                            direction = direction,
-                            strength = lastStrength
+                            direction = direction
                         )
                     )
                 }
@@ -100,12 +101,7 @@ class CompassSensor @Inject constructor(
 
         sensorManager.registerListener(
             sensorEventListener,
-            accelerometer,
-            SensorManager.SENSOR_DELAY_UI // Reduced from GAME to UI for less frequent updates
-        )
-        sensorManager.registerListener(
-            sensorEventListener,
-            magnetometer,
+            rotationVectorSensor,
             SensorManager.SENSOR_DELAY_UI
         )
 
@@ -113,14 +109,9 @@ class CompassSensor @Inject constructor(
             sensorManager.unregisterListener(sensorEventListener)
         }
     }
-
-    private fun FloatArray.magnitude(): Float {
-        return kotlin.math.sqrt(this[0] * this[0] + this[1] * this[1] + this[2] * this[2])
-    }
 }
 
 data class CompassData(
     val degrees: Int,
-    val direction: String,
-    val strength: Float
+    val direction: String
 ) 

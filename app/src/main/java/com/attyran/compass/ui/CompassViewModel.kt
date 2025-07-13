@@ -14,15 +14,15 @@ import javax.inject.Inject
 
 @HiltViewModel
 class CompassViewModel @Inject constructor(
-    private val compassSensor: CompassSensor,
-    private val locationSensor: LocationSensor
+    compassSensor: CompassSensor,
+    locationSensor: LocationSensor
 ) : ViewModel() {
 
     val compassData: StateFlow<CompassData> = compassSensor.getCompassReadings()
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
-            initialValue = CompassData(0, "N", 0f)
+            initialValue = CompassData(0, "N")
         )
 
     val locationData: StateFlow<LocationData> = locationSensor.getLocationUpdates()

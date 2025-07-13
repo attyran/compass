@@ -1,6 +1,6 @@
 package com.attyran.compass.ui
 
-import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.Spring
 import androidx.compose.foundation.Canvas
@@ -15,6 +15,8 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
@@ -37,14 +39,30 @@ fun CompassScreen(
 ) {
     val compassData by viewModel.compassData.collectAsStateWithLifecycle()
     val locationData by viewModel.locationData.collectAsStateWithLifecycle()
-    val rotation by animateFloatAsState(
-        targetValue = -compassData.degrees.toFloat(),
-        label = "compass_rotation",
-        animationSpec = spring(
-            dampingRatio = 0.8f,
-            stiffness = Spring.StiffnessLow
+    val currentRotation = remember { Animatable(0f) }
+
+    LaunchedEffect(compassData.degrees) {
+        val newRotation = -compassData.degrees.toFloat()
+        var shortestRotation = newRotation
+
+        // Calculate the shortest path for rotation
+        val diff = newRotation - currentRotation.value
+        if (diff > 180) {
+            shortestRotation += 360
+        } else if (diff < -180) {
+            shortestRotation -= 360
+        }
+
+        currentRotation.animateTo(
+            targetValue = shortestRotation,
+            animationSpec = spring(
+                dampingRatio = 0.8f,
+                stiffness = Spring.StiffnessLow
+            )
         )
-    )
+    }
+
+    val rotation by currentRotation.asState()
 
     // Extract colorScheme and typography before Canvas
     val colorScheme = MaterialTheme.colorScheme
@@ -60,7 +78,7 @@ fun CompassScreen(
             verticalArrangement = Arrangement.Center
         ) {
             Text(
-                text = "MAGNETIC HEADING",
+                text = "ROTATION VECTOR",
                 style = typography.titleMedium,
                 color = colorScheme.primary,
                 modifier = Modifier.padding(bottom = 16.dp)
@@ -152,12 +170,6 @@ fun CompassScreen(
                         style = typography.headlineMedium,
                         fontWeight = FontWeight.Bold
                     )
-                    Text(
-                        text = "Strength: ${String.format("%.1f", compassData.strength)} μT",
-                        style = typography.bodyMedium,
-                        color = colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(top = 8.dp)
-                    )
                 }
             }
 
@@ -177,6 +189,13 @@ fun CompassScreen(
                     color = colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.padding(top = 8.dp)
+                )
+                Text(
+                    text = "Lat: ${String.format("%.4f", locationData.latitude)}, Lng: ${String.format("%.4f", locationData.longitude)}",
+                    style = typography.bodyMedium,
+                    color = colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(top = 4.dp)
                 )
             }
         }
