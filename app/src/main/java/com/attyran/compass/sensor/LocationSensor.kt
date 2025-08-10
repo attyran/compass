@@ -75,7 +75,7 @@ class LocationSensor @Inject constructor(
         }
     }
 
-    private fun metersToFeet(meters: Double): Double {
+    internal fun metersToFeet(meters: Double): Double {
         return meters * 3.28084
     }
 }
