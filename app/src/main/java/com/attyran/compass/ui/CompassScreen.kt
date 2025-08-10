@@ -31,6 +31,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import kotlin.math.cos
+import kotlin.math.sin
+import kotlin.math.abs
 
 @Composable
 fun CompassScreen(
@@ -43,18 +46,23 @@ fun CompassScreen(
 
     LaunchedEffect(compassData.degrees) {
         val newRotation = -compassData.degrees.toFloat()
-        var shortestRotation = newRotation
-
-        // Calculate the shortest path for rotation
-        val diff = newRotation - currentRotation.value
+        
+        // Simple approach: calculate the shortest rotation path
+        val currentValue = currentRotation.value
+        var targetRotation = newRotation
+        
+        // Handle the wrap-around case by finding the shortest path
+        val diff = newRotation - currentValue
+        
+        // If the difference is greater than 180 degrees, take the shorter path
         if (diff > 180) {
-            shortestRotation += 360
+            targetRotation = currentValue + (diff - 360)
         } else if (diff < -180) {
-            shortestRotation -= 360
+            targetRotation = currentValue + (diff + 360)
         }
-
+        
         currentRotation.animateTo(
-            targetValue = shortestRotation,
+            targetValue = targetRotation,
             animationSpec = spring(
                 dampingRatio = 0.8f,
                 stiffness = Spring.StiffnessLow
@@ -78,15 +86,16 @@ fun CompassScreen(
             verticalArrangement = Arrangement.Center
         ) {
             Text(
-                text = "ROTATION VECTOR",
+                text = "COMPASS",
                 style = typography.titleMedium,
                 color = colorScheme.primary,
+                fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(bottom = 16.dp)
             )
 
             Box(
                 modifier = Modifier
-                    .size(300.dp)
+                    .size(320.dp)
                     .padding(16.dp),
                 contentAlignment = Alignment.Center
             ) {
@@ -99,36 +108,52 @@ fun CompassScreen(
                     val center = Offset(size.width / 2, size.height / 2)
                     val radius = size.width / 2
 
-                    // Draw outer circle
+                    // Draw outer circle with gradient effect
                     drawCircle(
                         color = colorScheme.outline,
                         radius = radius,
-                        style = Stroke(width = 2.dp.toPx())
+                        style = Stroke(width = 3.dp.toPx())
+                    )
+                    
+                    // Draw inner circle for better visual depth
+                    drawCircle(
+                        color = colorScheme.outline.copy(alpha = 0.3f),
+                        radius = radius - 2.dp.toPx(),
+                        style = Stroke(width = 1.dp.toPx())
                     )
 
-                    // Draw cardinal points and labels
+                    // Draw cardinal points and labels with improved positioning
                     val cardinalPoints = listOf("N", "E", "S", "W")
                     val textPaint = Paint().asFrameworkPaint().apply {
-                        textSize = 14.dp.toPx()
+                        textSize = 16.dp.toPx()
                         textAlign = android.graphics.Paint.Align.CENTER
                         color = colorScheme.onBackground.toArgb()
+                        isFakeBoldText = true
                     }
 
                     cardinalPoints.forEachIndexed { index, point ->
                         val angle = Math.toRadians((-90.0) + (90.0 * index))
-                        val dotRadius = if (point == "N") 6.dp.toPx() else 4.dp.toPx()
+                        val dotRadius = if (point == "N") 8.dp.toPx() else 5.dp.toPx()
                         
-                        // Position for the dot
-                        val dotX = center.x + (radius - 30.dp.toPx()) * kotlin.math.cos(angle).toFloat()
-                        val dotY = center.y + (radius - 30.dp.toPx()) * kotlin.math.sin(angle).toFloat()
+                        // Position for the dot (closer to center)
+                        val dotX = center.x + (radius - 25.dp.toPx()) * cos(angle).toFloat()
+                        val dotY = center.y + (radius - 25.dp.toPx()) * sin(angle).toFloat()
                         
-                        // Position for the label
-                        val labelX = center.x + (radius - 50.dp.toPx()) * kotlin.math.cos(angle).toFloat()
-                        val labelY = center.y + (radius - 50.dp.toPx()) * kotlin.math.sin(angle).toFloat() + 5.dp.toPx()
+                        // Position for the label (further out)
+                        val labelX = center.x + (radius - 45.dp.toPx()) * cos(angle).toFloat()
+                        val labelY = center.y + (radius - 45.dp.toPx()) * sin(angle).toFloat() + 6.dp.toPx()
 
-                        // Draw the dot
+                        // Draw the dot with different colors for cardinal points
+                        val dotColor = when (point) {
+                            "N" -> Color.Red
+                            "E" -> Color(0xFF4CAF50) // Green
+                            "S" -> Color(0xFF2196F3) // Blue
+                            "W" -> Color(0xFFFF9800) // Orange
+                            else -> colorScheme.onBackground
+                        }
+                        
                         drawCircle(
-                            color = if (point == "N") Color.Red else colorScheme.onBackground,
+                            color = dotColor,
                             radius = dotRadius,
                             center = Offset(dotX, dotY)
                         )
@@ -142,38 +167,90 @@ fun CompassScreen(
                         )
                     }
 
-                    // Draw degree markers
+                    // Draw degree markers with improved spacing
                     for (i in 0..359 step 15) {
                         val angle = Math.toRadians(i.toDouble())
-                        val startRadius = if (i % 45 == 0) radius - 20.dp.toPx() else radius - 10.dp.toPx()
+                        val startRadius = if (i % 45 == 0) radius - 25.dp.toPx() else radius - 15.dp.toPx()
                         val endRadius = radius
-                        val startX = center.x + startRadius * kotlin.math.cos(angle).toFloat()
-                        val startY = center.y + startRadius * kotlin.math.sin(angle).toFloat()
-                        val endX = center.x + endRadius * kotlin.math.cos(angle).toFloat()
-                        val endY = center.y + endRadius * kotlin.math.sin(angle).toFloat()
+                        val startX = center.x + startRadius * cos(angle).toFloat()
+                        val startY = center.y + startRadius * sin(angle).toFloat()
+                        val endX = center.x + endRadius * cos(angle).toFloat()
+                        val endY = center.y + endRadius * sin(angle).toFloat()
+                        
+                        val strokeWidth = if (i % 45 == 0) 3.dp.toPx() else 1.5.dp.toPx()
+                        val markerColor = if (i % 45 == 0) colorScheme.primary else colorScheme.onBackground.copy(alpha = 0.7f)
+                        
                         drawLine(
-                            color = colorScheme.onBackground,
+                            color = markerColor,
                             start = Offset(startX, startY),
                             end = Offset(endX, endY),
-                            strokeWidth = if (i % 45 == 0) 2.dp.toPx() else 1.dp.toPx()
+                            strokeWidth = strokeWidth
                         )
+                    }
+                    
+                    // Draw intermediate degree markers (every 5 degrees)
+                    for (i in 0..359 step 5) {
+                        if (i % 15 != 0) { // Skip the main markers
+                            val angle = Math.toRadians(i.toDouble())
+                            val startRadius = radius - 8.dp.toPx()
+                            val endRadius = radius
+                            val startX = center.x + startRadius * cos(angle).toFloat()
+                            val startY = center.y + startRadius * sin(angle).toFloat()
+                            val endX = center.x + endRadius * cos(angle).toFloat()
+                            val endY = center.y + endRadius * sin(angle).toFloat()
+                            
+                            drawLine(
+                                color = colorScheme.onBackground.copy(alpha = 0.4f),
+                                start = Offset(startX, startY),
+                                end = Offset(endX, endY),
+                                strokeWidth = 0.5.dp.toPx()
+                            )
+                        }
                     }
                 }
 
-                // Current heading
+                // Current heading display
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center
                 ) {
+                    // Up arrow pointer
+                    Canvas(
+                        modifier = Modifier.size(40.dp)
+                    ) {
+                        val center = Offset(size.width / 2, size.height / 2)
+                        val arrowLength = 16.dp.toPx()
+                        val arrowWidth = 8.dp.toPx()
+                        
+                        // Draw the arrow head (triangle pointing up)
+                        val path = androidx.compose.ui.graphics.Path().apply {
+                            moveTo(center.x, center.y - arrowLength / 2)
+                            lineTo(center.x - arrowWidth / 2, center.y + arrowLength / 2)
+                            lineTo(center.x + arrowWidth / 2, center.y + arrowLength / 2)
+                            close()
+                        }
+                        drawPath(
+                            path = path,
+                            color = colorScheme.primary
+                        )
+                    }
+                    
                     Text(
-                        text = "${compassData.degrees}° ${compassData.direction}",
-                        style = typography.headlineMedium,
-                        fontWeight = FontWeight.Bold
+                        text = "${compassData.degrees}°",
+                        style = typography.headlineLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = colorScheme.primary
+                    )
+                    Text(
+                        text = compassData.direction,
+                        style = typography.titleLarge,
+                        fontWeight = FontWeight.Medium,
+                        color = colorScheme.onSurface
                     )
                 }
             }
 
-            // Location information
+            // Location information with improved layout
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier.padding(16.dp)
@@ -181,7 +258,8 @@ fun CompassScreen(
                 Text(
                     text = "Elevation: ${String.format("%.1f", locationData.elevation)}ft",
                     style = typography.bodyLarge,
-                    color = colorScheme.onSurfaceVariant
+                    color = colorScheme.onSurfaceVariant,
+                    fontWeight = FontWeight.Medium
                 )
                 Text(
                     text = locationData.address,

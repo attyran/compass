@@ -36,9 +36,9 @@ class CompassSensor @Inject constructor(
         val adjustedRotationMatrix = FloatArray(9)
         val orientationAngles = FloatArray(3)
 
-        // Smoothing variables
+        // Simple smoothing variables
         var lastAzimuth = 0.0
-        val smoothingFactor = 0.1f // Lower = more smoothing
+        val smoothingFactor = 0.3f // Higher for more responsive movement
 
         val sensorEventListener = object : SensorEventListener {
             override fun onSensorChanged(event: SensorEvent) {
@@ -60,19 +60,14 @@ class CompassSensor @Inject constructor(
                     }
 
                     SensorManager.remapCoordinateSystem(rotationMatrix, axisX, axisY, adjustedRotationMatrix)
-
                     SensorManager.getOrientation(adjustedRotationMatrix, orientationAngles)
 
                     val azimuthInRadians = orientationAngles[0]
                     val azimuthInDegrees = Math.toDegrees(azimuthInRadians.toDouble())
                     val normalizedAzimuth = (azimuthInDegrees + 360) % 360
 
-                    // Apply exponential smoothing to azimuth
-                    var delta = normalizedAzimuth - lastAzimuth
-                    if (abs(delta) > 180) {
-                        delta = if (delta > 0) delta - 360 else delta + 360
-                    }
-                    lastAzimuth += smoothingFactor * delta
+                    // Simple smoothing
+                    lastAzimuth += smoothingFactor * (normalizedAzimuth - lastAzimuth)
                     lastAzimuth = (lastAzimuth + 360) % 360
 
                     val direction = when (lastAzimuth.roundToInt()) {
