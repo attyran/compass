@@ -33,7 +33,6 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlin.math.cos
 import kotlin.math.sin
-import kotlin.math.abs
 
 @Composable
 fun CompassScreen(
