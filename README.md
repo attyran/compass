@@ -55,7 +55,7 @@ app/src/main/java/com/attyran/compass/
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/yourusername/compass.git
+   git clone https://github.com/attyran/compass.git
    cd compass
    ```
 
@@ -118,50 +118,6 @@ Run tests with:
 ./gradlew test          # Unit tests
 ./gradlew connectedCheck # Instrumented tests
 ```
-
-## 🔧 Configuration
-
-### Build Variants
-
-- **Debug**: Development build with debugging enabled
-- **Release**: Production build with optimizations
-
-### Customization
-
-You can customize the app by modifying:
-- `app/src/main/res/values/colors.xml` - Color scheme
-- `app/src/main/res/values/themes.xml` - App theme
-- `app/src/main/java/com/attyran/compass/ui/theme/` - Compose theming
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🤝 Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request. For major changes, please open an issue first to discuss what you would like to change.
-
-### Development Setup
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-## 📞 Support
-
-If you encounter any issues or have questions:
-
-- Create an issue on GitHub
-- Check the existing issues for solutions
-- Review the code documentation
-
-## 🙏 Acknowledgments
-
-- Android team for Jetpack Compose
-- Google for Material Design 3
-- The open-source community for testing libraries and tools
 
 ---
 
