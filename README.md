@@ -1,3 +1,7 @@
+
+https://github.com/user-attachments/assets/dc5f3664-d8ba-4d65-8cd9-6c3bf5701555
+
+
 # 🧭 Compass - Android Compass Application
 
 A modern, feature-rich Android compass application built with Jetpack Compose, featuring real-time compass readings, location tracking, and a beautiful Material Design 3 interface.
