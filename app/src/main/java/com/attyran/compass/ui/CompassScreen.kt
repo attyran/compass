@@ -19,6 +19,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
@@ -31,6 +32,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.attyran.compass.R
 import kotlin.math.cos
 import kotlin.math.sin
 
@@ -85,7 +87,7 @@ fun CompassScreen(
             verticalArrangement = Arrangement.Center
         ) {
             Text(
-                text = "COMPASS",
+                text = stringResource(R.string.app_name),
                 style = typography.titleMedium,
                 color = colorScheme.primary,
                 fontWeight = FontWeight.Bold,
